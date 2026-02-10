@@ -1,0 +1,79 @@
+name: Daily Python Programs Generator
+
+# Schedule to run every day at 11:00 PM (23:00) UTC
+# Adjust the time according to your timezone
+on:
+  schedule:
+    # Runs at 23:00 UTC every day (11 PM)
+    # Format: minute hour day month day-of-week
+    - cron: '0 23 * * *'
+  
+  # Allow manual triggering from GitHub Actions tab
+  workflow_dispatch:
+
+# Set permissions for the GitHub token
+permissions:
+  contents: write
+
+jobs:
+  generate-and-commit:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Step 1: Check out the repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Fetch full history for proper commit tracking
+          fetch-depth: 0
+      
+      # Step 2: Set up Python environment
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      # Step 3: Install dependencies (if any)
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      
+      # Step 4: Run the program generator script
+      - name: Generate daily Python programs
+        run: |
+          python generate_programs.py
+      
+      # Step 5: Configure Git
+      - name: Configure Git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "GitHub Actions Bot"
+      
+      # Step 6: Commit and push changes
+      - name: Commit and push programs
+        run: |
+          # Add all generated files
+          git add programs/
+          
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No new programs to commit"
+          else
+            # Commit with timestamp
+            git commit -m "🤖 Auto-generated daily Python programs - $(date +'%Y-%m-%d')"
+            
+            # Push changes to the repository
+            git push
+            
+            echo "✓ Successfully committed and pushed new programs!"
+          fi
+      
+      # Step 7: Summary
+      - name: Job Summary
+        run: |
+          echo "### Daily Program Generation Complete! 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Date**: $(date +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "- **Programs Generated**: 5" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ✓ Success" >> $GITHUB_STEP_SUMMARY
